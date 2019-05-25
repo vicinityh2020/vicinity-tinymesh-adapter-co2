@@ -17,28 +17,26 @@ const (
 	quiesce = 250
 )
 
-var knt int
-
-var onMessageCallback mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
-	fmt.Printf("MSG: %s\n", msg.Payload())
-	text := fmt.Sprintf("this is result msg #%d!", knt)
-	knt++
-	token := client.Publish("nn/result", 0, false, text)
-	token.Wait()
-}
-
 type Client struct {
 	config *config.MQTTConfig
 	client mqtt.Client
 }
 
+func registerCallback(env *config.MQTTConfig) mqtt.MessageHandler {
+	return func(client mqtt.Client, message mqtt.Message) {
+		_, _ = extractCO2Data(message.Payload())
+
+		// Todo: use env to pass a channel/db for communication
+	}
+}
+
 func buildMQTTConnection(env *config.MQTTConfig) mqtt.Client {
+	var onMessageCallback = registerCallback(env)
 
 	mqtt.ERROR = log.New(os.Stdout, "", 0)
 	mqtt.DEBUG = log.New(os.Stdout, "", 0)
 
 	var scheme string
-
 	if env.Secure {
 		scheme = "ssl"
 	} else {
@@ -78,7 +76,6 @@ func (cli *Client) Listen() {
 		cli.client.Disconnect(quiesce)
 	}()
 
-	knt = 0
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
