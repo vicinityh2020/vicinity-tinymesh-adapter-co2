@@ -6,11 +6,14 @@ import (
 )
 
 const (
-	defaultMQTTServer = ""
-	defaultMQTTPort   = ""
-	defaultMQTTTopic  = "#"
+	mqttServer = "localhost"
+	mqttPort   = "1663"
+	mqttTopic  = "#"
 
-	defaultAgentUrl = ""
+	vicinityAgentUrl = "http://localhost:9997"
+	vicinityAdapterID = "1111111"
+
+	serverPort = "8080"
 )
 
 type MQTTConfig struct {
@@ -24,26 +27,36 @@ type MQTTConfig struct {
 
 type VicinityConfig struct {
 	AgentUrl string
+	AdapterID string
+}
+
+type ServerConfig struct {
+	Port string
 }
 
 type Config struct {
 	MQTT     *MQTTConfig
 	Vicinity *VicinityConfig
+	Server   *ServerConfig
 }
 
 // New returns a new Config struct
 func New() *Config {
 	return &Config{
 		MQTT: &MQTTConfig{
-			Server:   getEnv("CLOUDMQTT_SERVER", defaultMQTTServer),
+			Server:   getEnv("CLOUDMQTT_SERVER", mqttServer),
 			Username: getEnv("CLOUDMQTT_USERNAME", ""),
 			Password: getEnv("CLOUDMQTT_PASSWORD", ""),
-			Port:     getEnv("CLOUDMQTT_PORT", defaultMQTTPort),
-			Topic:    getEnv("CLOUDMQTT_TOPIC", defaultMQTTTopic),
+			Port:     getEnv("CLOUDMQTT_PORT", mqttPort),
+			Topic:    getEnv("CLOUDMQTT_TOPIC", mqttTopic),
 			Secure:   false,
 		},
 		Vicinity: &VicinityConfig{
-			AgentUrl: getEnv("VICINITY_AGENT_URL", defaultAgentUrl),
+			AgentUrl: getEnv("VICINITY_AGENT_URL", vicinityAgentUrl),
+			AdapterID: getEnv("VICINITY_ADAPTER_ID", vicinityAdapterID),
+		},
+		Server: &ServerConfig{
+			Port: getEnv("SERVER_PORT", serverPort),
 		},
 	}
 }

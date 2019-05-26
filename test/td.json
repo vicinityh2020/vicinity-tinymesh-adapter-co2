@@ -1,0 +1,40 @@
+{
+    "oid":"5f5f82ca-3e06-45de-a4b9-4993fb185456",
+    "name":"Vitir Co2 Sensor",
+    "type":"core:Device",
+    "version":"0.1",
+    "keywords":[
+        "door",
+        "sensor"
+    ],
+    "properties":[
+
+    ],
+    "actions":[
+
+    ],
+    "events":[
+        {
+            "eid":"vitir_door_event",
+            "monitors":"adapters:CO2Concentration",
+            "output":{
+                "type":"object",
+                "description":"state of the door",
+                "field":[
+                    {
+                        "name":"value",
+                        "schema":{
+                            "type":"boolean"
+                        }
+                    },
+                    {
+                        "name":"timestamp",
+                        "schema":{
+                            "type":"string"
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}

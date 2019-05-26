@@ -9,8 +9,8 @@ import (
 
 type Predicate func(DataPoint) bool
 
-var byName Predicate = func(point DataPoint) bool {
-	return strings.HasPrefix(point.Name, "CO2")
+var byUnit Predicate = func(point DataPoint) bool {
+	return strings.Contains(point.Unit, "ppm")
 }
 
 const (
@@ -73,7 +73,7 @@ func extractCO2Data(payload []byte) (*VitirSensor, error) {
 		return nil, err
 	}
 
-	sensor.Datapoint = filter(sensor.Datapoint, byName)
+	sensor.Datapoint = filter(sensor.Datapoint, byUnit)
 
 	return &sensor, nil
 }

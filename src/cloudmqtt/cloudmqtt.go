@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 	"vicinity-tinymesh-adapter-co2/src/config"
+	"vicinity-tinymesh-adapter-co2/src/vicinity"
 )
 
 const (
@@ -22,16 +23,32 @@ type Client struct {
 	client mqtt.Client
 }
 
-func registerCallback(env *config.MQTTConfig) mqtt.MessageHandler {
+func registerCallback(e chan vicinity.EventData) mqtt.MessageHandler {
 	return func(client mqtt.Client, message mqtt.Message) {
-		_, _ = extractCO2Data(message.Payload())
+		co2Data, err := extractCO2Data(message.Payload())
 
-		// Todo: use env to pass a channel/db for communication
+		if err != nil {
+			log.Println(err.Error())
+			return
+		}
+
+		event := vicinity.EventData{
+			TimeStamp: co2Data.TimeStamp,
+			UniqueID: co2Data.UniqueID,
+		}
+
+		for _, point := range co2Data.Datapoint {
+			event.Value = int(point.Value)
+			event.Unit = point.Unit
+			event.ResUnit = point.Unit
+
+			e <- event
+		}
 	}
 }
 
-func buildMQTTConnection(env *config.MQTTConfig) mqtt.Client {
-	var onMessageCallback = registerCallback(env)
+func buildMQTTConnection(env *config.MQTTConfig, eventChannel chan vicinity.EventData) mqtt.Client {
+	var onMessageCallback = registerCallback(eventChannel)
 
 	mqtt.ERROR = log.New(os.Stdout, "", 0)
 	mqtt.DEBUG = log.New(os.Stdout, "", 0)
@@ -64,11 +81,15 @@ func buildMQTTConnection(env *config.MQTTConfig) mqtt.Client {
 	return mqtt.NewClient(opts)
 }
 
-func New(env *config.MQTTConfig) *Client {
-	return &Client{
+func New(env *config.MQTTConfig) (*Client, chan vicinity.EventData) {
+
+	eventChannel := make(chan vicinity.EventData)
+	client := &Client{
 		config: env,
-		client: buildMQTTConnection(env),
+		client: buildMQTTConnection(env, eventChannel),
 	}
+
+	return client, eventChannel
 }
 
 func (cli *Client) Listen() {

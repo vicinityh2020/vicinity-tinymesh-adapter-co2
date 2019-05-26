@@ -19,3 +19,5 @@ vendor
 
 # Development environment config file
 .env
+
+*.db

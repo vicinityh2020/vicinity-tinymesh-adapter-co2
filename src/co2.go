@@ -1,26 +1,103 @@
 package main
 
 import (
+	"fmt"
+	"github.com/asdine/storm"
 	"github.com/joho/godotenv"
+	bolt "go.etcd.io/bbolt"
 	"log"
-	"os"
+	"time"
+	"vicinity-tinymesh-adapter-co2/src/cloudmqtt"
 	"vicinity-tinymesh-adapter-co2/src/config"
-	cloudmqtt "vicinity-tinymesh-adapter-co2/src/cloudmqtt"
+	"vicinity-tinymesh-adapter-co2/src/controller"
+	"vicinity-tinymesh-adapter-co2/src/model"
+	"vicinity-tinymesh-adapter-co2/src/vicinity"
 )
+
+type Environment struct {
+	Config *config.Config
+	DB     *storm.DB
+}
+
+var app Environment
 
 // init is invoked before main
 func init() {
-	// loads values from .env into the system
+	// loads values from .app into the system
 	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found")
-		os.Exit(0)
+		log.Fatalln("No .app file found")
+	}
+
+	// open bolt db
+	db, err := storm.Open("my.db", storm.BoltOptions(0600, &bolt.Options{Timeout: 1 * time.Second}))
+	if err != nil {
+		log.Fatalln(err.Error())
+	}
+
+	app.DB = db
+}
+
+func insertMockData(db *storm.DB) {
+
+	var mocks = []model.Sensor{
+		{
+			SerialNumber: "123",
+			ModelNumber:  "A",
+			UniqueID:     "A-123",
+			Unit:         "ppm",
+			Value: model.Reading{
+				Instant: 50,
+				Hourly:  100,
+				Daily:   150,
+			},
+		},
+		{
+			SerialNumber: "456",
+			ModelNumber:  "B",
+			UniqueID:     "B-456",
+			Unit:         "ppm",
+			Value: model.Reading{
+				Instant: 60,
+				Hourly:  110,
+				Daily:   160,
+			},
+		},
+		{
+			SerialNumber: "789",
+			ModelNumber:  "C",
+			UniqueID:     "C-789",
+			Unit:         "ppm",
+			Value: model.Reading{
+				Instant: 70,
+				Hourly:  120,
+				Daily:   170,
+			},
+		},
+	}
+
+	for _, m := range mocks {
+
+		if err := db.Save(&m); err != nil {
+			log.Println(fmt.Sprintf("#%s %s", m.UniqueID, err.Error()))
+		}
 	}
 }
 
 func main() {
-	env := config.New()
-	log.Print(env.MQTT.Server)
+	defer app.DB.Close()
 
-	mqttc := cloudmqtt.New(env.MQTT)
-	mqttc.Listen()
+	// uncomment for mock data
+	insertMockData(app.DB)
+
+	app.Config = config.New()
+	log.Print(app.Config.MQTT.Server)
+
+	mqttc, eventPipe := cloudmqtt.New(app.Config.MQTT)
+	go mqttc.Listen()
+
+	v := vicinity.New(app.Config.Vicinity, app.DB)
+	go v.NewEventEmitter(eventPipe)
+
+	server := controller.New(app.Config.Server, v)
+	server.Listen()
 }
