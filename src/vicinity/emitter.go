@@ -32,21 +32,7 @@ func (c *Client) NewEventEmitter(eventPipe chan EventData) *EventEmitter {
 	}
 }
 
-func (emitter *EventEmitter) ListenAndEmit() error {
-
-	var sensors []model.Sensor
-
-	if err := emitter.db.All(&sensors); err != nil {
-		return err
-	}
-
-	// Open event channel for each sensor
-	for _, sensor := range sensors {
-		if err := emitter.openEventChannel(&sensor); err != nil {
-			log.Println("Could not open event channel for", sensor.UniqueID, " at eid:")
-		}
-	}
-
+func (emitter *EventEmitter) start() {
 	select {
 	case event, ok := <-emitter.incoming:
 		if ok {
@@ -61,8 +47,24 @@ func (emitter *EventEmitter) ListenAndEmit() error {
 	default:
 		fmt.Println("No value ready, moving on.")
 	}
+}
 
-	return nil
+func (emitter *EventEmitter) ListenAndEmit() {
+
+	var sensors []model.Sensor
+
+	if err := emitter.db.All(&sensors); err != nil {
+		panic(err)
+	}
+
+	// Open event channel for each sensor
+	for _, sensor := range sensors {
+		if err := emitter.openEventChannel(&sensor); err != nil {
+			log.Println("Could not open event channel for", sensor.UniqueID, " at eid:")
+		}
+	}
+
+	emitter.start()
 }
 
 func (emitter *EventEmitter) isEventSupported(eid string) bool {

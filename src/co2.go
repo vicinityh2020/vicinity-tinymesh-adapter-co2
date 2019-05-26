@@ -21,22 +21,6 @@ type Environment struct {
 
 var app Environment
 
-// init is invoked before main
-func init() {
-	// loads values from .app into the system
-	if err := godotenv.Load(); err != nil {
-		log.Fatalln("No .app file found")
-	}
-
-	// open bolt db
-	db, err := storm.Open("my.db", storm.BoltOptions(0600, &bolt.Options{Timeout: 1 * time.Second}))
-	if err != nil {
-		log.Fatalln(err.Error())
-	}
-
-	app.DB = db
-}
-
 func insertMockData(db *storm.DB) {
 
 	var mocks = []model.Sensor{
@@ -83,20 +67,36 @@ func insertMockData(db *storm.DB) {
 	}
 }
 
-func main() {
-	defer app.DB.Close()
+// init is invoked before main
+func init() {
+	// loads values from .app into the system
+	if err := godotenv.Load(); err != nil {
+		log.Fatalln("No .app file found")
+	}
 
+	// open bolt db
+	db, err := storm.Open("my.db", storm.BoltOptions(0600, &bolt.Options{Timeout: 1 * time.Second}))
+	if err != nil {
+		log.Fatalln(err.Error())
+	}
+
+	app.DB = db
 	// uncomment for mock data
 	insertMockData(app.DB)
 
 	app.Config = config.New()
-	log.Print(app.Config.MQTT.Server)
+}
+
+func main() {
+	defer app.DB.Close()
 
 	mqttc, eventPipe := cloudmqtt.New(app.Config.MQTT)
 	go mqttc.Listen()
 
 	v := vicinity.New(app.Config.Vicinity, app.DB)
-	go v.NewEventEmitter(eventPipe)
+
+	emitter := v.NewEventEmitter(eventPipe)
+	go emitter.ListenAndEmit()
 
 	server := controller.New(app.Config.Server, v)
 	server.Listen()

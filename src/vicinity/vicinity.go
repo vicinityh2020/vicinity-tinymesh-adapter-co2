@@ -55,11 +55,11 @@ func New(vicinityConfig *config.VicinityConfig, db *storm.DB) *Client {
 		db:     db,
 	}
 
-	v.generateTD()
+	v.makeTD()
 	return v
 }
 
-func (c *Client) RegenerateTD() {
+func (c *Client) RemakeTD() {
 
 }
 
@@ -114,7 +114,7 @@ func (c *Client) makeDevice(sensor model.Sensor) Device {
 	}
 }
 
-func (c *Client) generateTD() {
+func (c *Client) makeTD() {
 	if c.TD != nil {
 		return
 	}

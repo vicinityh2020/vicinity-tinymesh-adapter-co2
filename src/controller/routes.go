@@ -8,18 +8,21 @@ import (
 var serveProperties = func(server *Server, c *gin.Context) {
 	oid, exists := c.Params.Get("oid")
 	if !exists {
-		c.JSON(http.StatusBadRequest, nil)
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
 	}
 
 	prop, exists := c.Params.Get("prop")
 	if !exists {
-		c.JSON(http.StatusBadRequest, nil)
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
 	}
 
 	sensor, err := server.vicinity.GetSensor(oid)
 
 	if err != nil {
-		c.JSON(http.StatusNotFound, nil)
+		c.AbortWithStatus(http.StatusNotFound)
+		return
 	}
 
 	switch prop {
@@ -29,7 +32,9 @@ var serveProperties = func(server *Server, c *gin.Context) {
 			"unit":      sensor.Unit,
 			"timestamp": sensor.LastUpdated,
 		})
+		break
 	default:
-		c.JSON(http.StatusNotFound, nil)
+		c.AbortWithStatus(http.StatusNotFound)
+		break
 	}
 }
