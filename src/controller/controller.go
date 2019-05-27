@@ -21,8 +21,9 @@ func (server *Server) setupRouter() *gin.Engine {
 		c.JSON(http.StatusOK, server.vicinity.TD)
 	})
 
+	// PROPERTIES
 	r.GET("/objects/:oid/properties/:prop", func(c *gin.Context) {
-		serveProperties(server, c)
+		server.ServeProperties(c)
 	})
 
 	return r

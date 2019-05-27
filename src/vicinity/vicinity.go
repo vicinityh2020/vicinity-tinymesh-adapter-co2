@@ -59,10 +59,6 @@ func New(vicinityConfig *config.VicinityConfig, db *storm.DB) *Client {
 	return v
 }
 
-func (c *Client) RemakeTD() {
-
-}
-
 func (c *Client) makeProperty(description string, pid string, oid string) Property {
 	return Property{
 		Pid:      pid,
@@ -91,7 +87,6 @@ func (c *Client) makeEvent(description string, oid string) Event {
 }
 
 func (c *Client) makeDevice(sensor model.Sensor) Device {
-	// TODO: fetch description dynamically from db
 	var description = "CO2"
 
 	var events []Event

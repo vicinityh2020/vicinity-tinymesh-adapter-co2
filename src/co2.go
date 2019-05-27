@@ -60,7 +60,6 @@ func insertMockData(db *storm.DB) {
 	}
 
 	for _, m := range mocks {
-
 		if err := db.Save(&m); err != nil {
 			log.Println(fmt.Sprintf("#%s %s", m.UniqueID, err.Error()))
 		}
@@ -74,6 +73,8 @@ func init() {
 		log.Fatalln("No .app file found")
 	}
 
+	app.Config = config.New()
+
 	// open bolt db
 	db, err := storm.Open("my.db", storm.BoltOptions(0600, &bolt.Options{Timeout: 1 * time.Second}))
 	if err != nil {
@@ -83,19 +84,18 @@ func init() {
 	app.DB = db
 	// uncomment for mock data
 	insertMockData(app.DB)
-
-	app.Config = config.New()
 }
 
 func main() {
+	// TODO: Handle interrupt signals and shutdown all goroutines gracefully
 	defer app.DB.Close()
 
-	mqttc, eventPipe := cloudmqtt.New(app.Config.MQTT)
+	mqttc := cloudmqtt.New(app.Config.MQTT, app.DB)
 	go mqttc.Listen()
 
 	v := vicinity.New(app.Config.Vicinity, app.DB)
 
-	emitter := v.NewEventEmitter(eventPipe)
+	emitter := v.NewEventEmitter(mqttc.GetEventPipe())
 	go emitter.ListenAndEmit()
 
 	server := controller.New(app.Config.Server, v)

@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-var serveProperties = func(server *Server, c *gin.Context) {
+func (server *Server) ServeProperties(c *gin.Context) {
 	oid, exists := c.Params.Get("oid")
 	if !exists {
 		c.AbortWithStatus(http.StatusBadRequest)

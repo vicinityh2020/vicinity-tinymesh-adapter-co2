@@ -49,6 +49,7 @@ func (emitter *EventEmitter) start() {
 	}
 }
 
+// Goroutine
 func (emitter *EventEmitter) ListenAndEmit() {
 
 	var sensors []model.Sensor
@@ -60,7 +61,7 @@ func (emitter *EventEmitter) ListenAndEmit() {
 	// Open event channel for each sensor
 	for _, sensor := range sensors {
 		if err := emitter.openEventChannel(&sensor); err != nil {
-			log.Println("Could not open event channel for", sensor.UniqueID, " at eid:")
+			log.Println("Could not open event channel for", sensor.UniqueID, ":", err.Error())
 		}
 	}
 

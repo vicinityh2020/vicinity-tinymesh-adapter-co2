@@ -2,7 +2,9 @@ package cloudmqtt
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
+	"github.com/asdine/storm"
 	"github.com/eclipse/paho.mqtt.golang"
 	"log"
 	"os"
@@ -20,41 +22,64 @@ const (
 
 type Client struct {
 	config *config.MQTTConfig
-	client mqtt.Client
+	db     *storm.DB
+	eventPipe chan vicinity.EventData
 }
 
-func registerCallback(e chan vicinity.EventData) mqtt.MessageHandler {
-	return func(client mqtt.Client, message mqtt.Message) {
-		co2Data, err := extractCO2Data(message.Payload())
+func (cmqtt *Client) updateDb(sensor *VitirSensor) error {
+	// todo: update db
+	return nil
+}
 
+func (cmqtt *Client) forwardEvent(co2Data *VitirSensor) {
+	event := vicinity.EventData{
+		TimeStamp: co2Data.TimeStamp,
+		UniqueID:  co2Data.UniqueID,
+	}
+
+	for _, point := range co2Data.Datapoint {
+
+		var value int
+		if err := json.Unmarshal(point.Value, &value); err != nil {
+			log.Println(fmt.Sprintf("Could not unmarshal value of a datapoint: %s", err.Error()))
+			continue
+		}
+
+		event.Value = value
+		event.Unit = point.Unit
+		event.ResUnit = point.Unit
+
+		cmqtt.eventPipe <- event
+	}
+}
+
+func (cmqtt *Client) registerCallback() mqtt.MessageHandler {
+	return func(client mqtt.Client, message mqtt.Message) {
+		// extract the co2 relevant sensor data
+		co2Data, err := extractCO2Data(message.Payload())
 		if err != nil {
 			log.Println(err.Error())
 			return
 		}
 
-		event := vicinity.EventData{
-			TimeStamp: co2Data.TimeStamp,
-			UniqueID: co2Data.UniqueID,
-		}
+		// forward event to vicinity EventEmitter
+		cmqtt.forwardEvent(co2Data)
 
-		for _, point := range co2Data.Datapoint {
-			event.Value = int(point.Value)
-			event.Unit = point.Unit
-			event.ResUnit = point.Unit
-
-			e <- event
+		// update the local database
+		if err := cmqtt.updateDb(co2Data); err != nil {
+			log.Println(err.Error())
 		}
 	}
 }
 
-func buildMQTTConnection(env *config.MQTTConfig, eventChannel chan vicinity.EventData) mqtt.Client {
-	var onMessageCallback = registerCallback(eventChannel)
+func (cmqtt *Client) buildMQTTConnection() mqtt.Client {
+	var onMessageCallback = cmqtt.registerCallback()
 
 	mqtt.ERROR = log.New(os.Stdout, "", 0)
 	mqtt.DEBUG = log.New(os.Stdout, "", 0)
 
 	var scheme string
-	if env.Secure {
+	if cmqtt.config.Secure {
 		scheme = "ssl"
 	} else {
 		scheme = "tcp"
@@ -62,18 +87,18 @@ func buildMQTTConnection(env *config.MQTTConfig, eventChannel chan vicinity.Even
 
 	hostname, _ := os.Hostname()
 
-	server := fmt.Sprintf("%s://%s:%s", scheme, env.Server, env.Port)
+	server := fmt.Sprintf("%s://%s:%s", scheme, cmqtt.config.Server, cmqtt.config.Port)
 	opts := mqtt.NewClientOptions().AddBroker(server)
 
-	opts.SetUsername(env.Username)
-	opts.SetPassword(env.Password)
+	opts.SetUsername(cmqtt.config.Username)
+	opts.SetPassword(cmqtt.config.Password)
 	opts.SetClientID(hostname + strconv.Itoa(time.Now().Second()))
 
 	tlsConfig := &tls.Config{InsecureSkipVerify: true, ClientAuth: tls.NoClientCert}
 	opts.SetTLSConfig(tlsConfig)
 
 	opts.OnConnect = func(c mqtt.Client) {
-		if token := c.Subscribe(env.Topic, byte(0), onMessageCallback); token.Wait() && token.Error() != nil {
+		if token := c.Subscribe(cmqtt.config.Topic, byte(0), onMessageCallback); token.Wait() && token.Error() != nil {
 			panic(token.Error())
 		}
 	}
@@ -81,29 +106,38 @@ func buildMQTTConnection(env *config.MQTTConfig, eventChannel chan vicinity.Even
 	return mqtt.NewClient(opts)
 }
 
-func New(env *config.MQTTConfig) (*Client, chan vicinity.EventData) {
+func New(env *config.MQTTConfig, db *storm.DB) *Client {
 
 	eventChannel := make(chan vicinity.EventData)
 	client := &Client{
 		config: env,
-		client: buildMQTTConnection(env, eventChannel),
+		db:     db,
+		eventPipe: eventChannel,
 	}
 
-	return client, eventChannel
+	return client
 }
 
-func (cli *Client) Listen() {
+// Goroutine
+func (cmqtt *Client) Listen() {
+
+	mqttClient := cmqtt.buildMQTTConnection()
+
 	defer func() {
-		cli.client.Disconnect(quiesce)
+		mqttClient.Disconnect(quiesce)
 	}()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-	if token := cli.client.Connect(); token.Wait() && token.Error() != nil {
+	if token := mqttClient.Connect(); token.Wait() && token.Error() != nil {
 		panic(token.Error())
 	} else {
-		log.Println("Connected to", cli.config.Server)
+		log.Println("Connected to", cmqtt.config.Server)
 	}
 	<-c
+}
+
+func (cmqtt *Client) GetEventPipe() chan vicinity.EventData {
+	return cmqtt.eventPipe
 }

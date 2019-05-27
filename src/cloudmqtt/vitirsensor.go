@@ -18,20 +18,20 @@ const (
 )
 
 type DataPoint struct {
-	Type      string  `json:"type"`
-	Name      string  `json:"name"`
-	Size      int     `json:"size"`
-	DataType  string  `json:"dataType"`
-	Unit      string  `json:"unit"`
-	Res       float64 `json:"res"`
-	ResUnit   string  `json:"resUnit"`
-	ValueType string  `json:"valueType"`
-	Value     float64 `json:"value"`
-	Scale     float64 `json:"scale"`
-	Min       string  `json:"min"`
-	Max       string  `json:"max"`
-	Low       string  `json:"low"`
-	High      string  `json:"high"`
+	Type      string          `json:"type"`
+	Name      string          `json:"name"`
+	Size      int             `json:"size"`
+	DataType  string          `json:"dataType"`
+	Unit      string          `json:"unit"`
+	Res       float64         `json:"res"`
+	ResUnit   string          `json:"resUnit"`
+	ValueType string          `json:"valueType"`
+	Value     json.RawMessage `json:"value"`
+	Scale     float64         `json:"scale"`
+	Min       string          `json:"min"`
+	Max       string          `json:"max"`
+	Low       string          `json:"low"`
+	High      string          `json:"high"`
 }
 
 type VitirSensor struct {
