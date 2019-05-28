@@ -10,10 +10,10 @@ import (
 )
 
 type Client struct {
-	config     *config.VicinityConfig
-	db         *storm.DB
-	TD         *gin.H
-	eventPipe  chan EventData
+	config  *config.VicinityConfig
+	db      *storm.DB
+	TD      *gin.H
+	eventCh chan EventData
 }
 
 type EventDescription struct {

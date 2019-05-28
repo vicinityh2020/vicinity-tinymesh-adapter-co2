@@ -8,9 +8,7 @@ import (
 	"github.com/eclipse/paho.mqtt.golang"
 	"log"
 	"os"
-	"os/signal"
 	"strconv"
-	"syscall"
 	"time"
 	"vicinity-tinymesh-adapter-co2/src/config"
 	"vicinity-tinymesh-adapter-co2/src/vicinity"
@@ -21,9 +19,10 @@ const (
 )
 
 type Client struct {
-	config *config.MQTTConfig
-	db     *storm.DB
-	eventPipe chan vicinity.EventData
+	config  *config.MQTTConfig
+	db      *storm.DB
+	eventCh chan vicinity.EventData
+	client  mqtt.Client
 }
 
 func (cmqtt *Client) updateDb(sensor *VitirSensor) error {
@@ -49,7 +48,7 @@ func (cmqtt *Client) forwardEvent(co2Data *VitirSensor) {
 		event.Unit = point.Unit
 		event.ResUnit = point.Unit
 
-		cmqtt.eventPipe <- event
+		cmqtt.eventCh <- event
 	}
 }
 
@@ -110,9 +109,9 @@ func New(env *config.MQTTConfig, db *storm.DB) *Client {
 
 	eventChannel := make(chan vicinity.EventData)
 	client := &Client{
-		config: env,
-		db:     db,
-		eventPipe: eventChannel,
+		config:  env,
+		db:      db,
+		eventCh: eventChannel,
 	}
 
 	return client
@@ -121,23 +120,22 @@ func New(env *config.MQTTConfig, db *storm.DB) *Client {
 // Goroutine
 func (cmqtt *Client) Listen() {
 
-	mqttClient := cmqtt.buildMQTTConnection()
+	cmqtt.client = cmqtt.buildMQTTConnection()
 
-	defer func() {
-		mqttClient.Disconnect(quiesce)
-	}()
-
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-
-	if token := mqttClient.Connect(); token.Wait() && token.Error() != nil {
+	if token := cmqtt.client.Connect(); token.Wait() && token.Error() != nil {
 		panic(token.Error())
 	} else {
 		log.Println("Connected to", cmqtt.config.Server)
 	}
-	<-c
+
 }
 
-func (cmqtt *Client) GetEventPipe() chan vicinity.EventData {
-	return cmqtt.eventPipe
+func (cmqtt *Client) Shutdown() {
+	cmqtt.client.Disconnect(quiesce)
+	close(cmqtt.eventCh)
+	log.Println("MQTT client shut down")
+}
+
+func (cmqtt *Client) GetEventChannel() chan vicinity.EventData {
+	return cmqtt.eventCh
 }

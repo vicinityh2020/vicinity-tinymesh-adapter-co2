@@ -10,6 +10,8 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"sync"
+	"time"
 	"vicinity-tinymesh-adapter-co2/src/config"
 	"vicinity-tinymesh-adapter-co2/src/model"
 )
@@ -19,34 +21,49 @@ type EventEmitter struct {
 	db         *storm.DB
 	incoming   chan EventData
 	httpClient *http.Client
+	wg         *sync.WaitGroup
 	events     []string
 }
 
-func (c *Client) NewEventEmitter(eventPipe chan EventData) *EventEmitter {
+const (
+	timeout = 5 * time.Second
+)
+
+func (c *Client) NewEventEmitter(eventCh chan EventData, wg *sync.WaitGroup) *EventEmitter {
 	return &EventEmitter{
-		config:     c.config,
-		db:         c.db,
-		incoming:   eventPipe,
-		httpClient: &http.Client{},
-		events:     []string{},
+		config:   c.config,
+		db:       c.db,
+		incoming: eventCh,
+		httpClient: &http.Client{
+			Timeout: timeout,
+		},
+		wg:     wg,
+		events: []string{},
 	}
 }
 
 func (emitter *EventEmitter) start() {
-	select {
-	case event, ok := <-emitter.incoming:
-		if ok {
-			fmt.Printf("Value %d was read.\n", event.Value)
-			err := emitter.publish(&event)
-			if err != nil {
-				log.Println(err.Error())
+	var running = true
+
+	emitter.wg.Add(1)
+
+	for running {
+		select {
+		case event, ok := <-emitter.incoming:
+			if ok {
+				log.Printf("Value %d was read.\n", event.Value)
+				err := emitter.publish(&event)
+				if err != nil {
+					log.Println(err.Error())
+				}
+			} else {
+				log.Println("Emitter shut down")
+				running = false
 			}
-		} else {
-			fmt.Println("Channel closed!")
 		}
-	default:
-		fmt.Println("No value ready, moving on.")
 	}
+
+	emitter.wg.Done()
 }
 
 // Goroutine

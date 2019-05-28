@@ -6,6 +6,10 @@ import (
 	"github.com/joho/godotenv"
 	bolt "go.etcd.io/bbolt"
 	"log"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 	"time"
 	"vicinity-tinymesh-adapter-co2/src/cloudmqtt"
 	"vicinity-tinymesh-adapter-co2/src/config"
@@ -20,6 +24,33 @@ type Environment struct {
 }
 
 var app Environment
+
+func (app *Environment) run() {
+	var wg sync.WaitGroup
+	defer app.DB.Close()
+	defer wg.Wait()
+
+	mqttc := cloudmqtt.New(app.Config.MQTT, app.DB)
+	mqttc.Listen()
+	defer mqttc.Shutdown()
+
+	v := vicinity.New(app.Config.Vicinity, app.DB)
+
+	emitter := v.NewEventEmitter(mqttc.GetEventChannel(), &wg)
+	go emitter.ListenAndEmit()
+
+	server := controller.New(app.Config.Server, v)
+	go server.Listen()
+	defer server.Shutdown()
+
+	quit := make(chan os.Signal, 1)
+	defer close(quit)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	<-quit
+
+	log.Println("Adapter shutting down...")
+}
 
 func insertMockData(db *storm.DB) {
 
@@ -66,7 +97,6 @@ func insertMockData(db *storm.DB) {
 	}
 }
 
-// init is invoked before main
 func init() {
 	// loads values from .app into the system
 	if err := godotenv.Load(); err != nil {
@@ -87,17 +117,6 @@ func init() {
 }
 
 func main() {
-	// TODO: Handle interrupt signals and shutdown all goroutines gracefully
-	defer app.DB.Close()
-
-	mqttc := cloudmqtt.New(app.Config.MQTT, app.DB)
-	go mqttc.Listen()
-
-	v := vicinity.New(app.Config.Vicinity, app.DB)
-
-	emitter := v.NewEventEmitter(mqttc.GetEventPipe())
-	go emitter.ListenAndEmit()
-
-	server := controller.New(app.Config.Server, v)
-	server.Listen()
+	// init is invoked before main automatically
+	app.run()
 }
