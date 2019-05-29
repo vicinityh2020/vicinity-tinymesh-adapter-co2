@@ -25,12 +25,12 @@ type Client struct {
 	client  mqtt.Client
 }
 
-func (cmqtt *Client) updateDb(sensor *VitirSensor) error {
+func (cmqtt *Client) updateDb(sensor *VitirSensorEvent) error {
 	// todo: update db
 	return nil
 }
 
-func (cmqtt *Client) forwardEvent(co2Data *VitirSensor) {
+func (cmqtt *Client) forwardEvent(co2Data *VitirSensorEvent) {
 	event := vicinity.EventData{
 		TimeStamp: co2Data.TimeStamp,
 		UniqueID:  co2Data.UniqueID,
@@ -44,12 +44,23 @@ func (cmqtt *Client) forwardEvent(co2Data *VitirSensor) {
 			continue
 		}
 
-		event.Value = value
-		event.Unit = point.Unit
-		event.ResUnit = point.Unit
-
-		cmqtt.eventCh <- event
+		switch point.ResUnit {
+		case resUnitNow:
+			event.Value.Now = value
+			break
+		case resUnitHourly:
+			event.Value.Hourly = value
+			break
+		case resUnitDaily:
+			event.Value.Daily = value
+			break
+		default:
+			log.Print(co2Data.UniqueID, "contains an unknown resUnit value:", point.ResUnit)
+			break
+		}
 	}
+
+	cmqtt.eventCh <- event
 }
 
 func (cmqtt *Client) registerCallback() mqtt.MessageHandler {
@@ -61,13 +72,13 @@ func (cmqtt *Client) registerCallback() mqtt.MessageHandler {
 			return
 		}
 
-		//// update the local database
-		//if err := cmqtt.updateDb(co2Data); err != nil {
-		//	log.Println(err.Error())
-		//}
-
 		// forward event to vicinity EventEmitter
 		cmqtt.forwardEvent(co2Data)
+
+		// update the local database
+		if err := cmqtt.updateDb(co2Data); err != nil {
+			log.Println(err.Error())
+		}
 	}
 }
 

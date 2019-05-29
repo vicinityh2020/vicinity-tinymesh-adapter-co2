@@ -84,7 +84,6 @@ func (emitter *EventEmitter) ListenAndEmit() {
 }
 
 func (emitter *EventEmitter) isEventSupported(eid string) bool {
-
 	for _, e := range emitter.events {
 		if eid == e {
 			return true
@@ -97,14 +96,8 @@ func (emitter *EventEmitter) openEventChannel(sensor *model.Sensor) error {
 	return errors.New("not implemented")
 }
 
-func (emitter *EventEmitter) publish(e *EventData) error {
-	var eventID = e.getEid()
-
-	if !emitter.isEventSupported(eventID) {
-		return errors.New(fmt.Sprintf("event %s not supported", eventID))
-	}
-
-	eventPath := fmt.Sprintf("/agent/events/%s", eventID)
+func (emitter *EventEmitter) send(e *EventData, eid string) error {
+	eventPath := fmt.Sprintf("/agent/events/%s", eid)
 	uri := emitter.config.AgentUrl + eventPath
 
 	event := map[string]interface{}{
@@ -145,6 +138,15 @@ func (emitter *EventEmitter) publish(e *EventData) error {
 
 	// todo: replace with status checks
 	log.Println(body)
-
 	return nil
+}
+
+func (emitter *EventEmitter) publish(e *EventData) error {
+	var eid = e.getEid()
+
+	if !emitter.isEventSupported(eid) {
+		return errors.New(fmt.Sprintf("event %s not supported", eid))
+	}
+
+	return emitter.send(e, eid)
 }

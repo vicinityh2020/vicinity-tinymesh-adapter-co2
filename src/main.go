@@ -13,6 +13,7 @@ import (
 	"vicinity-tinymesh-adapter-co2/src/cloudmqtt"
 	"vicinity-tinymesh-adapter-co2/src/config"
 	"vicinity-tinymesh-adapter-co2/src/controller"
+	"vicinity-tinymesh-adapter-co2/src/model"
 	"vicinity-tinymesh-adapter-co2/src/vicinity"
 )
 
@@ -23,6 +24,44 @@ type Environment struct {
 
 var app Environment
 
+func (app *Environment) syncDb() {
+
+	var sensors = []model.Sensor{
+		{
+			ModelNumber: "213",
+			Unit:        "ppm",
+			// Unique id is SerialNo-Manufacturer
+			UniqueID: "AD-H1",
+			Value: model.SensorValue{
+				Now:    0,
+				Hourly: 0,
+				Daily:  0,
+			},
+			LastUpdated: time.Now(),
+		},
+		{
+			ModelNumber: "521",
+			Unit:        "ppm",
+			// Unique id is SerialNo-Manufacturer
+			UniqueID: "521A-ZZ",
+			Value: model.SensorValue{
+				Now:    0,
+				Hourly: 0,
+				Daily:  0,
+			},
+			LastUpdated: time.Now(),
+		},
+	}
+
+	for _, s := range sensors{
+		if err := app.DB.Save(&s); err != nil {
+			if err != storm.ErrAlreadyExists {
+				log.Fatalln(err.Error())
+			}
+		}
+	}
+}
+
 func (app *Environment) init() {
 	// loads values from .env into the system
 	if err := godotenv.Load(); err != nil {
@@ -32,7 +71,7 @@ func (app *Environment) init() {
 	app.Config = config.New()
 
 	// open bolt db
-	db, err := storm.Open("my.db", storm.BoltOptions(0600, &bolt.Options{Timeout: 1 * time.Second}))
+	db, err := storm.Open(".db", storm.BoltOptions(0600, &bolt.Options{Timeout: 1 * time.Second}))
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
@@ -70,8 +109,12 @@ func (app *Environment) run() {
 // init is invoked before main automatically
 func init() {
 	app.init()
+	app.syncDb()
 }
 
 func main() {
+	// todo: proper logging
+	// todo: fix TD with object event values and object property values\
+	// todo: make json config for supported devices
 	app.run()
 }

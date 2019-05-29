@@ -2,12 +2,17 @@ package vicinity
 
 import "fmt"
 
+type EventValue struct {
+	Now    int
+	Hourly int
+	Daily  int
+}
+
 type EventData struct {
 	TimeStamp int64
 	UniqueID  string
-	Value     int
+	Value     EventValue
 	Unit      string
-	ResUnit   string // resUnit
 }
 
 func (e *EventData) getEid() string {
