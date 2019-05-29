@@ -61,13 +61,13 @@ func (cmqtt *Client) registerCallback() mqtt.MessageHandler {
 			return
 		}
 
+		//// update the local database
+		//if err := cmqtt.updateDb(co2Data); err != nil {
+		//	log.Println(err.Error())
+		//}
+
 		// forward event to vicinity EventEmitter
 		cmqtt.forwardEvent(co2Data)
-
-		// update the local database
-		if err := cmqtt.updateDb(co2Data); err != nil {
-			log.Println(err.Error())
-		}
 	}
 }
 

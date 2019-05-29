@@ -1,6 +1,9 @@
 package model
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type Reading struct {
 	Instant int
@@ -16,4 +19,8 @@ type Sensor struct {
 	UniqueID     string `storm:"unique"`
 	Value        Reading `storm:"inline"`
 	LastUpdated  time.Time `storm:"index"`
+}
+
+func (s *Sensor) GetEid() string {
+	return fmt.Sprintf("%s-event", s.UniqueID)
 }

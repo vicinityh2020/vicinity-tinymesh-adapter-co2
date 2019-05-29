@@ -51,11 +51,7 @@ func (emitter *EventEmitter) start() {
 		select {
 		case event, ok := <-emitter.incoming:
 			if ok {
-				log.Printf("Value %d was read.\n", event.Value)
-				err := emitter.publish(&event)
-				if err != nil {
-					log.Println(err.Error())
-				}
+				log.Print(emitter.publish(&event))
 			} else {
 				log.Println("Emitter shut down")
 				running = false
@@ -80,12 +76,15 @@ func (emitter *EventEmitter) ListenAndEmit() {
 		if err := emitter.openEventChannel(&sensor); err != nil {
 			log.Println("Could not open event channel for", sensor.UniqueID, ":", err.Error())
 		}
+
+		emitter.events = append(emitter.events, sensor.GetEid())
 	}
 
 	emitter.start()
 }
 
 func (emitter *EventEmitter) isEventSupported(eid string) bool {
+
 	for _, e := range emitter.events {
 		if eid == e {
 			return true

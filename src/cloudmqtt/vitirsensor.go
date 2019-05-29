@@ -73,6 +73,12 @@ func extractCO2Data(payload []byte) (*VitirSensor, error) {
 		return nil, err
 	}
 
+	if sensor.Dif != co2SensorDif {
+		return nil, &NotCO2SensorError{msg: "dif does not indicate a co2 sensor", sensor: &sensor}
+	}
+
+	log.Println("co2 sensor data arrived")
+
 	sensor.Datapoint = filter(sensor.Datapoint, byUnit)
 
 	return &sensor, nil

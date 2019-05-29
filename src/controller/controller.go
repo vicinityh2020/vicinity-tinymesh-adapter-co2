@@ -20,15 +20,8 @@ type Server struct {
 func (server *Server) setupRouter() *gin.Engine {
 	r := gin.Default()
 
-	// THING DESCRIPTION
-	r.GET("/objects", func(c *gin.Context) {
-		c.JSON(http.StatusOK, server.vicinity.TD)
-	})
-
-	// PROPERTIES
-	r.GET("/objects/:oid/properties/:prop", func(c *gin.Context) {
-		server.ServeProperties(c)
-	})
+	r.GET("/objects", server.handleTD)
+	r.GET("/objects/:oid/properties/:prop", server.handleProperties)
 
 	return r
 }
@@ -61,13 +54,12 @@ func (server *Server) Listen() {
 }
 
 func (server *Server) Shutdown() {
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
 
 	defer cancel()
 
 	if err := server.http.Shutdown(ctx); err != nil {
-		log.Println("Server Shutdown error:", err.Error())
+		log.Print("Server Shutdown error:", err.Error())
 	}
 
 	log.Println("Server shut down")

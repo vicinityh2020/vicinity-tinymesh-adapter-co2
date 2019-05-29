@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func (server *Server) ServeProperties(c *gin.Context) {
+func (server *Server) handleProperties(c *gin.Context) {
 	oid, exists := c.Params.Get("oid")
 	if !exists {
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -37,4 +37,8 @@ func (server *Server) ServeProperties(c *gin.Context) {
 		c.AbortWithStatus(http.StatusNotFound)
 		break
 	}
+}
+
+func (server *Server) handleTD(c *gin.Context) {
+	c.JSON(http.StatusOK, server.vicinity.TD)
 }
