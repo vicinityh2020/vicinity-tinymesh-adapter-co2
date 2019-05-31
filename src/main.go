@@ -91,6 +91,8 @@ func (app *Environment) run() {
 	v := vicinity.New(app.Config.Vicinity, app.DB)
 
 	emitter := v.NewEventEmitter(mqttc.GetEventChannel(), &wg)
+
+	wg.Add(1)
 	go emitter.ListenAndEmit()
 
 	server := controller.New(app.Config.Server, v)

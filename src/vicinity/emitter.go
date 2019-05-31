@@ -45,21 +45,19 @@ func (c *Client) NewEventEmitter(eventCh chan EventData, wg *sync.WaitGroup) *Ev
 func (emitter *EventEmitter) start() {
 	var running = true
 
-	emitter.wg.Add(1)
-
 	for running {
 		select {
 		case event, ok := <-emitter.incoming:
 			if ok {
 				log.Print(emitter.publish(&event))
 			} else {
-				log.Println("Emitter shut down")
 				running = false
 			}
 		}
 	}
 
 	emitter.wg.Done()
+	log.Println("Emitter shut down")
 }
 
 // Goroutine
