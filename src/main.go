@@ -28,10 +28,10 @@ func (app *Environment) syncDb() {
 
 	var sensors = []model.Sensor{
 		{
-			ModelNumber: "213",
+			ModelNumber: "LAN-WMBUS-E-CO2",
 			Unit:        "ppm",
 			// Unique id is SerialNo-Manufacturer
-			UniqueID: "AD-H1",
+			UniqueID: "LAS00016225",
 			Value: model.SensorValue{
 				Now:    0,
 				Hourly: 0,
@@ -40,10 +40,10 @@ func (app *Environment) syncDb() {
 			LastUpdated: time.Now(),
 		},
 		{
-			ModelNumber: "521",
+			ModelNumber: "LAN-WMBUS-E-CO2",
 			Unit:        "ppm",
 			// Unique id is SerialNo-Manufacturer
-			UniqueID: "521A-ZZ",
+			UniqueID: "LAS00016222",
 			Value: model.SensorValue{
 				Now:    0,
 				Hourly: 0,
