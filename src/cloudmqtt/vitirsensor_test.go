@@ -1,6 +1,8 @@
 package cloudmqtt
 
 import (
+	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -24,6 +26,7 @@ func getMockData(mockfile string) []byte {
 }
 
 func TestExtractCO2(t *testing.T) {
+	// todo: remake with respect to object event
 
 	dummy := getMockData("roomsensor.json")
 	fasit := []interface{}{482, 474, 469}
@@ -39,7 +42,13 @@ func TestExtractCO2(t *testing.T) {
 	}
 
 	for k, v := range sensor.Datapoint {
-		actual := int(v.Value)
+
+		var actual int
+		if err := json.Unmarshal(v.Value, &actual); err != nil {
+			fmt.Println("could not unmarshal v.Value")
+			t.FailNow()
+		}
+
 		if actual != fasit[k] {
 			t.FailNow()
 		}

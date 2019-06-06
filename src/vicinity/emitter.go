@@ -112,13 +112,15 @@ func (emitter *EventEmitter) send(e *EventData, eid string) error {
 
 	req, err := http.NewRequest(http.MethodPut, uri, bytes.NewBuffer(payload))
 
+	if err != nil {
+		return err
+	}
+
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("infrastructure-id", e.UniqueID)
 	req.Header.Set("adapter-id", emitter.config.AdapterID)
 
-	if err != nil {
-		return err
-	}
+	req.Close = true
 
 	resp, err := emitter.httpClient.Do(req)
 
