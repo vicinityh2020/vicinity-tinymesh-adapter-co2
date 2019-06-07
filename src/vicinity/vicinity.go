@@ -22,10 +22,19 @@ type EventDescription struct {
 }
 
 const (
-	semanticValue     = "core:value"
-	semanticTimestamp = "core:timestamp"
+	// Fields
+	semanticValue       = "core:value"
+	semanticTimestamp   = "core:timestamp"
+	s4bldgBuildingSpace = "s4bldg:BuildingSpace"
+
+	// Devices
 	coreDevice        = "core:Device"
-	s4bldgBuilding    = "s4bldg:Building"
+	adaptersCo2Sensor = "adapters:CO2Sensor"
+
+	// Monitors
+	adaptersLatitude        = "adapters:GPSLatitude"
+	adaptersLongitude       = "adapters:GPSLongitude"
+	adaptersCO2Conentration = "adapters:CO2Concentration"
 )
 
 var (
@@ -59,6 +68,26 @@ var (
 			},
 		},
 	}
+
+	latitudeMeta = []Field{
+		{
+			Name:        "latitude",
+			Description: "latitudinal coordinates of the device",
+			Schema: Schema{
+				Type: "double",
+			},
+		},
+	}
+
+	longitudeMeta = []Field{
+		{
+			Name:        "longitude",
+			Description: "longitudinal coordinates of the device",
+			Schema: Schema{
+				Type: "double",
+			},
+		},
+	}
 )
 
 func New(vicinityConfig *config.VicinityConfig, db *storm.DB) *Client {
@@ -71,19 +100,28 @@ func New(vicinityConfig *config.VicinityConfig, db *storm.DB) *Client {
 	return v
 }
 
-func (c *Client) makeProperty(description string, pid string, oid string) Property {
-	return Property{
+func (c *Client) makeProperty(description string, monitors string, pid string, oid string, fields []Field, staticValue interface{}) Property {
+
+	prop := Property{
 		Pid:      pid,
-		Monitors: "adapters:CO2Concentration",
+		Monitors: monitors,
 		ReadLink: Link{
 			Href: fmt.Sprintf("/objects/%s/properties/%s", oid, pid),
 			Output: IO{
 				Type:        "object",
 				Description: description,
-				Fields:      co2Meta,
+				Fields:      fields,
 			},
 		},
 	}
+
+	if staticValue != nil {
+		prop.ReadLink.StaticValue = map[string]interface{}{
+			pid: staticValue,
+		}
+	}
+
+	return prop
 }
 
 func (c *Client) makeEvent(description string, oid string) Event {
@@ -99,18 +137,20 @@ func (c *Client) makeEvent(description string, oid string) Event {
 }
 
 func (c *Client) makeDevice(sensor model.Sensor) Device {
-	var description = "CO2"
+	var sensorDescription = "CO2"
 
 	var events []Event
 	var properties []Property
 
-	events = append(events, c.makeEvent(description, sensor.UniqueID))
-	properties = append(properties, c.makeProperty(description, "value", sensor.UniqueID))
+	events = append(events, c.makeEvent(sensorDescription, sensor.UniqueID))
+	properties = append(properties, c.makeProperty(sensorDescription, adaptersCO2Conentration, "value", sensor.UniqueID, co2Meta, nil))
+	properties = append(properties, c.makeProperty("latitudinal coordinates", adaptersLatitude, "latitude", sensor.UniqueID, latitudeMeta, sensor.Latitude))
+	properties = append(properties, c.makeProperty("longitudinal coordinates", adaptersLongitude, "longitude", sensor.UniqueID, longitudeMeta, sensor.Longitude))
 
 	return Device{
 		Oid:      sensor.UniqueID,
 		Name:     fmt.Sprintf("Vitir CO2 Sensor %s", sensor.UniqueID),
-		Type:     coreDevice,
+		Type:     adaptersCo2Sensor,
 		Version:  sensor.ModelNumber,        // only for services?
 		Keywords: []string{"co2", "sensor"}, // only for services?
 
@@ -118,7 +158,7 @@ func (c *Client) makeDevice(sensor model.Sensor) Device {
 		Actions:    []interface{}{},
 		Events:     events,
 		LocatedIn: []Location{
-			{LocationType: s4bldgBuilding, Label: "CWi Moss"},
+			{LocationType: s4bldgBuildingSpace, Label: "CWi Moss"},
 		},
 	}
 }

@@ -37,6 +37,8 @@ func (app *Environment) syncDb() {
 				Daily:  0,
 			},
 			LastUpdated: time.Now().Unix(),
+			Latitude:    59.4407535,
+			Longitude:   10.6667105,
 		},
 		{
 			UniqueID:    "LAS00016222",
@@ -48,6 +50,8 @@ func (app *Environment) syncDb() {
 				Daily:  0,
 			},
 			LastUpdated: time.Now().Unix(),
+			Latitude:    59.4407617,
+			Longitude:   10.6667319,
 		},
 	}
 
@@ -116,8 +120,5 @@ func init() {
 }
 
 func main() {
-	// todo: proper logging
-	// todo: fix TD with object event values and object property values\
-	// todo: make json config for supported devices
 	app.run()
 }

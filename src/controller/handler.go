@@ -27,11 +27,13 @@ func (server *Server) handleProperties(c *gin.Context) {
 
 	switch prop {
 	case "value":
-		c.JSON(http.StatusOK, gin.H{
-			"value":     sensor.Value.Now,
-			"unit":      sensor.Unit,
-			"timestamp": sensor.LastUpdated,
-		})
+		c.JSON(http.StatusOK, sensor.GetValue())
+		break
+	case "latitude":
+		c.JSON(http.StatusOK, sensor.GetLatitude())
+		break
+	case "longitude":
+		c.JSON(http.StatusOK, sensor.GetLongitude())
 		break
 	default:
 		c.AbortWithStatus(http.StatusNotFound)

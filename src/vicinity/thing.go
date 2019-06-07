@@ -31,8 +31,9 @@ type Event struct {
 }
 
 type Link struct {
-	Href   string `json:"href"`
-	Output IO     `json:"output"`
+	Href        string      `json:"href"`
+	Output      IO          `json:"output"`
+	StaticValue interface{} `json:"static-value,omitempty"`
 }
 
 type Property struct {
