@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strconv"
 	"sync"
 	"time"
 	"vicinity-tinymesh-adapter-co2/src/config"
@@ -19,7 +18,7 @@ import (
 type EventEmitter struct {
 	config     *config.VicinityConfig
 	db         *storm.DB
-	incoming   chan EventData
+	incoming   chan *EventData
 	httpClient *http.Client
 	wg         *sync.WaitGroup
 	events     []string
@@ -29,7 +28,7 @@ const (
 	timeout = 5 * time.Second
 )
 
-func (c *Client) NewEventEmitter(eventCh chan EventData, wg *sync.WaitGroup) *EventEmitter {
+func (c *Client) NewEventEmitter(eventCh chan *EventData, wg *sync.WaitGroup) *EventEmitter {
 	return &EventEmitter{
 		config:   c.config,
 		db:       c.db,
@@ -49,7 +48,9 @@ func (emitter *EventEmitter) start() {
 		select {
 		case event, ok := <-emitter.incoming:
 			if ok {
-				log.Print(emitter.publish(&event))
+				if err := emitter.publish(event); err != nil {
+					log.Println(err.Error())
+				}
 			} else {
 				running = false
 			}
@@ -99,9 +100,9 @@ func (emitter *EventEmitter) send(e *EventData, eid string) error {
 	uri := emitter.config.AgentUrl + eventPath
 
 	event := map[string]interface{}{
-		"value":     e.Value,
+		"value":     e.Value.Now,
 		"unit":      e.Unit,
-		"timestamp": strconv.FormatInt(e.TimeStamp, 10),
+		"timestamp": e.TimeStamp,
 	}
 
 	payload, err := json.Marshal(&event)
@@ -137,7 +138,7 @@ func (emitter *EventEmitter) send(e *EventData, eid string) error {
 	}
 
 	// todo: replace with status checks
-	log.Println(body)
+	log.Println(string(body))
 	return nil
 }
 

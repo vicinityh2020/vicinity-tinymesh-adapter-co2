@@ -28,35 +28,36 @@ func (app *Environment) syncDb() {
 
 	var sensors = []model.Sensor{
 		{
+			UniqueID:    "LAS00016225",
 			ModelNumber: "LAN-WMBUS-E-CO2",
 			Unit:        "ppm",
-			// Unique id is SerialNo-Manufacturer
-			UniqueID: "LAS00016225",
 			Value: model.SensorValue{
 				Now:    0,
 				Hourly: 0,
 				Daily:  0,
 			},
-			LastUpdated: time.Now(),
+			LastUpdated: time.Now().Unix(),
 		},
 		{
+			UniqueID:    "LAS00016222",
 			ModelNumber: "LAN-WMBUS-E-CO2",
 			Unit:        "ppm",
-			// Unique id is SerialNo-Manufacturer
-			UniqueID: "LAS00016222",
 			Value: model.SensorValue{
 				Now:    0,
 				Hourly: 0,
 				Daily:  0,
 			},
-			LastUpdated: time.Now(),
+			LastUpdated: time.Now().Unix(),
 		},
 	}
 
-	for _, s := range sensors{
-		if err := app.DB.Save(&s); err != nil {
-			if err != storm.ErrAlreadyExists {
-				log.Fatalln(err.Error())
+	for _, s := range sensors {
+		var d model.Sensor
+		if err := app.DB.One("UniqueID", s.UniqueID, &d); err == storm.ErrNotFound {
+			if err := app.DB.Save(&s); err != nil {
+				if err != storm.ErrAlreadyExists {
+					log.Fatalln(err.Error())
+				}
 			}
 		}
 	}

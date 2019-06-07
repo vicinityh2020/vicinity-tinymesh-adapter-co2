@@ -11,56 +11,32 @@ import (
 	"strconv"
 	"time"
 	"vicinity-tinymesh-adapter-co2/src/config"
+	"vicinity-tinymesh-adapter-co2/src/model"
 	"vicinity-tinymesh-adapter-co2/src/vicinity"
 )
 
 const (
 	quiesce = 250
+
+	resUnitNow    = "ppm"
+	resUnitHourly = "Hour"
+	resUnitDaily  = "24hour"
 )
 
 type Client struct {
 	config  *config.MQTTConfig
 	db      *storm.DB
-	eventCh chan vicinity.EventData
+	eventCh chan *vicinity.EventData
 	client  mqtt.Client
 }
 
-func (cmqtt *Client) updateDb(sensor *VitirSensorEvent) error {
-	// todo: update db
-	return nil
-}
-
-func (cmqtt *Client) forwardEvent(co2Data *VitirSensorEvent) {
-	event := vicinity.EventData{
-		TimeStamp: co2Data.TimeStamp,
-		UniqueID:  co2Data.UniqueID,
+func (cmqtt *Client) updateDb(e *vicinity.EventData) error {
+	s := model.Sensor{
+		UniqueID: e.UniqueID,
+		LastUpdated: e.TimeStamp,
+		Value: model.SensorValue(e.Value),
 	}
-
-	for _, point := range co2Data.Datapoint {
-
-		var value int
-		if err := json.Unmarshal(point.Value, &value); err != nil {
-			log.Println(fmt.Sprintf("Could not unmarshal value of a datapoint: %s", err.Error()))
-			continue
-		}
-
-		switch point.ResUnit {
-		case resUnitNow:
-			event.Value.Now = value
-			break
-		case resUnitHourly:
-			event.Value.Hourly = value
-			break
-		case resUnitDaily:
-			event.Value.Daily = value
-			break
-		default:
-			log.Print(co2Data.UniqueID, "contains an unknown resUnit value:", point.ResUnit)
-			break
-		}
-	}
-
-	cmqtt.eventCh <- event
+	return cmqtt.db.Update(&s)
 }
 
 func (cmqtt *Client) registerCallback() mqtt.MessageHandler {
@@ -72,11 +48,13 @@ func (cmqtt *Client) registerCallback() mqtt.MessageHandler {
 			return
 		}
 
+		var event = translateEventData(co2Data)
+
 		// forward event to vicinity EventEmitter
-		cmqtt.forwardEvent(co2Data)
+		cmqtt.eventCh <- event
 
 		// update the local database
-		if err := cmqtt.updateDb(co2Data); err != nil {
+		if err := cmqtt.updateDb(event); err != nil {
 			log.Println(err.Error())
 		}
 	}
@@ -118,7 +96,7 @@ func (cmqtt *Client) buildMQTTConnection() mqtt.Client {
 
 func New(env *config.MQTTConfig, db *storm.DB) *Client {
 
-	eventChannel := make(chan vicinity.EventData)
+	eventChannel := make(chan *vicinity.EventData)
 	client := &Client{
 		config:  env,
 		db:      db,
@@ -147,6 +125,40 @@ func (cmqtt *Client) Shutdown() {
 	log.Println("MQTT client shut down")
 }
 
-func (cmqtt *Client) GetEventChannel() chan vicinity.EventData {
+func (cmqtt *Client) GetEventChannel() chan *vicinity.EventData {
 	return cmqtt.eventCh
+}
+
+func translateEventData(co2Data *VitirSensorEvent) *vicinity.EventData {
+	e := vicinity.EventData{
+		TimeStamp: co2Data.TimeStamp,
+		UniqueID:  co2Data.UniqueID,
+	}
+
+	for i, point := range co2Data.Datapoint {
+
+		var value int
+		if err := json.Unmarshal(point.Value, &value); err != nil {
+			log.Println(fmt.Sprintf("Could not unmarshal value of a datapoint: %s", err.Error()))
+			continue
+		}
+
+		switch point.ResUnit {
+		case resUnitNow:
+			e.Value.Now = value
+			e.Unit = co2Data.Datapoint[i].Unit
+			break
+		case resUnitHourly:
+			e.Value.Hourly = value
+			break
+		case resUnitDaily:
+			e.Value.Daily = value
+			break
+		default:
+			log.Print(co2Data.UniqueID, "contains an unknown resUnit value:", point.ResUnit)
+			break
+		}
+	}
+
+	return &e
 }

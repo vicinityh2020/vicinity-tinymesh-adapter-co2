@@ -15,10 +15,6 @@ var byUnit Predicate = func(point DataPoint) bool {
 
 const (
 	co2SensorDif = 42
-
-	resUnitNow    = "ppm"
-	resUnitHourly = "Hour"
-	resUnitDaily  = "24hour"
 )
 
 type DataPoint struct {

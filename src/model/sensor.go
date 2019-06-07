@@ -2,7 +2,6 @@ package model
 
 import (
 	"fmt"
-	"time"
 )
 
 type SensorValue struct {
@@ -12,13 +11,11 @@ type SensorValue struct {
 }
 
 type Sensor struct {
-	Pk          int `storm:"id,increment"` // primary key
-	ModelNumber string
-	Unit        string
-	// Unique id is in format: serialNumber-manufacturer
-	UniqueID    string      `storm:"unique"`
-	Value       SensorValue `storm:"inline"`
-	LastUpdated time.Time   `storm:"index"`
+	UniqueID     string `storm:"id"`
+	ModelNumber  string
+	Unit         string
+	Value        SensorValue `storm:"inline"`
+	LastUpdated  int64       `storm:"index"`
 }
 
 func (s *Sensor) GetEid() string {

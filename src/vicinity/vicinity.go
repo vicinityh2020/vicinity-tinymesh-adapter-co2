@@ -21,19 +21,29 @@ type EventDescription struct {
 	ResUnit string
 }
 
+const (
+	semanticValue     = "core:value"
+	semanticTimestamp = "core:timestamp"
+	coreDevice        = "core:Device"
+	s4bldgBuilding    = "s4bldg:Building"
+)
+
 var (
 	co2Meta = []Field{
 		// Field Value
 		{
-			Name: "value",
+			Name:        "value",
+			Description: "co2 reading",
+			Predicate:   semanticValue,
 			Schema: Schema{
-				Type: "number",
+				Type: "integer",
 			},
 		},
 
 		// Field Unit
 		{
-			Name: "unit",
+			Name:        "unit",
+			Description: "co2 measurement unit",
 			Schema: Schema{
 				Type: "string",
 			},
@@ -41,9 +51,11 @@ var (
 
 		// Field Timestamp
 		{
-			Name: "timestamp",
+			Name:        "timestamp",
+			Description: "Unix timestamp of time the reading was received",
+			Predicate:   semanticTimestamp,
 			Schema: Schema{
-				Type: "string",
+				Type: "integer",
 			},
 		},
 	}
@@ -98,14 +110,16 @@ func (c *Client) makeDevice(sensor model.Sensor) Device {
 	return Device{
 		Oid:      sensor.UniqueID,
 		Name:     fmt.Sprintf("Vitir CO2 Sensor %s", sensor.UniqueID),
-		Type:     "core:Device",
-		Version:  sensor.ModelNumber,
-		Keywords: []string{"co2", "sensor"},
+		Type:     coreDevice,
+		Version:  sensor.ModelNumber,        // only for services?
+		Keywords: []string{"co2", "sensor"}, // only for services?
 
 		Properties: properties,
 		Actions:    []interface{}{},
-
-		Events: events,
+		Events:     events,
+		LocatedIn: []Location{
+			{LocationType: s4bldgBuilding, Label: "CWi Moss"},
+		},
 	}
 }
 

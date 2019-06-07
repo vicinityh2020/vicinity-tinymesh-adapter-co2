@@ -20,6 +20,7 @@ type Server struct {
 func (server *Server) setupRouter() *gin.Engine {
 	r := gin.Default()
 
+	r.GET("/", server.handleTD)
 	r.GET("/objects", server.handleTD)
 	r.GET("/objects/:oid/properties/:prop", server.handleProperties)
 
