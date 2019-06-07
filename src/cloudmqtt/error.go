@@ -1,6 +1,8 @@
 package cloudmqtt
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type NotCO2SensorError struct {
 	sensor *VitirSensorEvent

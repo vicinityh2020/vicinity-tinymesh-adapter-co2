@@ -1,12 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"github.com/asdine/storm"
 	"github.com/joho/godotenv"
 	bolt "go.etcd.io/bbolt"
 	"log"
 	"os"
 	"os/signal"
+	"path"
 	"sync"
 	"syscall"
 	"time"
@@ -18,8 +20,9 @@ import (
 )
 
 type Environment struct {
-	Config *config.Config
-	DB     *storm.DB
+	Config  *config.Config
+	DB      *storm.DB
+	LogPath string
 }
 
 var app Environment
@@ -69,6 +72,14 @@ func (app *Environment) syncDb() {
 
 func (app *Environment) init() {
 	// loads values from .env into the system
+
+	app.LogPath = path.Join(".", "logs")
+	if err := os.MkdirAll(app.LogPath, os.ModePerm); err != nil {
+		log.Fatal("could not create path:", app.LogPath)
+	}
+
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+
 	if err := godotenv.Load(); err != nil {
 		log.Fatalln("No .env file found")
 	}
@@ -86,24 +97,52 @@ func (app *Environment) init() {
 
 func (app *Environment) run() {
 	var wg sync.WaitGroup
+
+	// Logger
+	mainLogger, err := os.OpenFile(path.Join(app.LogPath, fmt.Sprintf("adapter-%s.log", time.Now().Format("2006-01-02"))), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+
+	if err != nil {
+		log.Fatal("Could not create mainLogger logfile:", err.Error())
+	}
+	defer mainLogger.Close()
+
+	mqttLogger, err := os.OpenFile(path.Join(app.LogPath, fmt.Sprintf("mqtt-%s.log", time.Now().Format("2006-01-02"))), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatal("Could not create MQTT trace logfile:", err.Error())
+	}
+	defer mqttLogger.Close()
+
+	ginLogger, err := os.OpenFile(path.Join(app.LogPath, fmt.Sprintf("gin-%s.log", time.Now().Format("2006-01-02"))), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatal("Could not create GIN trace logfile:", err.Error())
+	}
+	defer ginLogger.Close()
+
+	log.SetOutput(mainLogger)
+
 	defer app.DB.Close()
 	defer wg.Wait()
 
-	mqttc := cloudmqtt.New(app.Config.MQTT, app.DB)
+	// MQTT
+	mqttc := cloudmqtt.New(app.Config.MQTT, app.DB, log.New(mqttLogger, "", log.Ldate|log.Ltime))
 	mqttc.Listen()
 	defer mqttc.Shutdown()
 
+	// VICINITY
 	v := vicinity.New(app.Config.Vicinity, app.DB)
 
+	// Event Emitter
 	emitter := v.NewEventEmitter(mqttc.GetEventChannel(), &wg)
 
 	wg.Add(1)
 	go emitter.ListenAndEmit()
 
-	server := controller.New(app.Config.Server, v)
+	// Controller
+	server := controller.New(app.Config.Server, v, ginLogger)
 	go server.Listen()
 	defer server.Shutdown()
 
+	// INT handler
 	quit := make(chan os.Signal, 1)
 	defer close(quit)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)

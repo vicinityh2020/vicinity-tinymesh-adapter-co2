@@ -24,17 +24,18 @@ const (
 )
 
 type Client struct {
-	config  *config.MQTTConfig
-	db      *storm.DB
-	eventCh chan *vicinity.EventData
-	client  mqtt.Client
+	config      *config.MQTTConfig
+	db          *storm.DB
+	eventCh     chan *vicinity.EventData
+	client      mqtt.Client
+	traceLogger *log.Logger
 }
 
 func (cmqtt *Client) updateDb(e *vicinity.EventData) error {
 	s := model.Sensor{
-		UniqueID: e.UniqueID,
+		UniqueID:    e.UniqueID,
 		LastUpdated: e.TimeStamp,
-		Value: model.SensorValue(e.Value),
+		Value:       model.SensorValue(e.Value),
 	}
 	return cmqtt.db.Update(&s)
 }
@@ -44,7 +45,6 @@ func (cmqtt *Client) registerCallback() mqtt.MessageHandler {
 		// extract the co2 relevant sensor data
 		co2Data, err := extractCO2Data(message.Payload())
 		if err != nil {
-			log.Println(err.Error())
 			return
 		}
 
@@ -63,8 +63,8 @@ func (cmqtt *Client) registerCallback() mqtt.MessageHandler {
 func (cmqtt *Client) buildMQTTConnection() mqtt.Client {
 	var onMessageCallback = cmqtt.registerCallback()
 
-	mqtt.ERROR = log.New(os.Stdout, "", 0)
-	mqtt.DEBUG = log.New(os.Stdout, "", 0)
+	mqtt.ERROR = cmqtt.traceLogger
+	//mqtt.DEBUG = cmqtt.traceLogger
 
 	var scheme string
 	if cmqtt.config.Secure {
@@ -94,13 +94,14 @@ func (cmqtt *Client) buildMQTTConnection() mqtt.Client {
 	return mqtt.NewClient(opts)
 }
 
-func New(env *config.MQTTConfig, db *storm.DB) *Client {
+func New(env *config.MQTTConfig, db *storm.DB, logger *log.Logger) *Client {
 
 	eventChannel := make(chan *vicinity.EventData)
 	client := &Client{
 		config:  env,
 		db:      db,
 		eventCh: eventChannel,
+		traceLogger: logger,
 	}
 
 	return client

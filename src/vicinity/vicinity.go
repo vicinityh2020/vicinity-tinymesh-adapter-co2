@@ -32,9 +32,9 @@ const (
 	adaptersCo2Sensor = "adapters:CO2Sensor"
 
 	// Monitors
-	adaptersLatitude        = "adapters:GPSLatitude"
-	adaptersLongitude       = "adapters:GPSLongitude"
-	adaptersCO2Conentration = "adapters:CO2Concentration"
+	adaptersLatitude         = "adapters:GPSLatitude"
+	adaptersLongitude        = "adapters:GPSLongitude"
+	adaptersCO2Concentration = "adapters:CO2Concentration"
 )
 
 var (
@@ -143,7 +143,7 @@ func (c *Client) makeDevice(sensor model.Sensor) Device {
 	var properties []Property
 
 	events = append(events, c.makeEvent(sensorDescription, sensor.UniqueID))
-	properties = append(properties, c.makeProperty(sensorDescription, adaptersCO2Conentration, "value", sensor.UniqueID, co2Meta, nil))
+	properties = append(properties, c.makeProperty(sensorDescription, adaptersCO2Concentration, "value", sensor.UniqueID, co2Meta, nil))
 	properties = append(properties, c.makeProperty("latitudinal coordinates", adaptersLatitude, "latitude", sensor.UniqueID, latitudeMeta, sensor.Latitude))
 	properties = append(properties, c.makeProperty("longitudinal coordinates", adaptersLongitude, "longitude", sensor.UniqueID, longitudeMeta, sensor.Longitude))
 
