@@ -46,8 +46,8 @@ type Device struct {
 	Oid        string        `json:"oid"`
 	Name       string        `json:"name"`
 	Type       string        `json:"type"`
-	Version    string        `json:"version"`
-	Keywords   []string      `json:"keywords"`
+	Version    string        `json:"version,omitempty"`
+	Keywords   []string      `json:"keywords,omitempty"`
 	Properties []Property    `json:"properties"`
 	Actions    []interface{} `json:"actions"`
 	Events     []Event       `json:"events"`

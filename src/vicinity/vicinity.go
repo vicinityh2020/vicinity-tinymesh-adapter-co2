@@ -151,8 +151,8 @@ func (c *Client) makeDevice(sensor model.Sensor) Device {
 		Oid:      sensor.UniqueID,
 		Name:     fmt.Sprintf("Vitir CO2 Sensor %s", sensor.UniqueID),
 		Type:     adaptersCo2Sensor,
-		Version:  sensor.ModelNumber,        // only for services?
-		Keywords: []string{"co2", "sensor"}, // only for services?
+		//Version:  sensor.ModelNumber,        // only for services?
+		//Keywords: []string{"co2", "sensor"}, // only for services?
 
 		Properties: properties,
 		Actions:    []interface{}{},
