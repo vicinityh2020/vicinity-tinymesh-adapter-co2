@@ -158,7 +158,7 @@ func (c *Client) makeDevice(sensor model.Sensor) Device {
 		Actions:    []interface{}{},
 		Events:     events,
 		LocatedIn: []Location{
-			{LocationType: s4bldgBuildingSpace, Label: "CWi Moss"},
+			{LocationType: s4bldgBuildingSpace, LocationId: "https://www.cwi.no", Label: "CWi Moss"},
 		},
 	}
 }
