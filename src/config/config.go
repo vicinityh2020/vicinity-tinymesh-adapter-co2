@@ -11,7 +11,7 @@ const (
 	mqttTopic  = "#"
 
 	vicinityAgentUrl = "http://localhost:9997"
-	vicinityAdapterID = "1111111"
+	vicinityAdapterID = "15dfe786-272c-4239-a852-be6b7605661f"
 
 	serverPort = "8080"
 )

@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strconv"
 	"sync"
 	"time"
 	"vicinity-tinymesh-adapter-co2/src/config"
@@ -19,7 +18,7 @@ import (
 type EventEmitter struct {
 	config     *config.VicinityConfig
 	db         *storm.DB
-	incoming   chan EventData
+	incoming   chan *EventData
 	httpClient *http.Client
 	wg         *sync.WaitGroup
 	events     []string
@@ -29,7 +28,7 @@ const (
 	timeout = 5 * time.Second
 )
 
-func (c *Client) NewEventEmitter(eventCh chan EventData, wg *sync.WaitGroup) *EventEmitter {
+func (c *Client) NewEventEmitter(eventCh chan *EventData, wg *sync.WaitGroup) *EventEmitter {
 	return &EventEmitter{
 		config:   c.config,
 		db:       c.db,
@@ -45,21 +44,21 @@ func (c *Client) NewEventEmitter(eventCh chan EventData, wg *sync.WaitGroup) *Ev
 func (emitter *EventEmitter) start() {
 	var running = true
 
-	emitter.wg.Add(1)
-
 	for running {
 		select {
 		case event, ok := <-emitter.incoming:
 			if ok {
-				log.Print(emitter.publish(&event))
+				if err := emitter.publish(event); err != nil {
+					log.Println(err.Error())
+				}
 			} else {
-				log.Println("Emitter shut down")
 				running = false
 			}
 		}
 	}
 
 	emitter.wg.Done()
+	log.Println("Emitter shut down")
 }
 
 // Goroutine
@@ -84,7 +83,6 @@ func (emitter *EventEmitter) ListenAndEmit() {
 }
 
 func (emitter *EventEmitter) isEventSupported(eid string) bool {
-
 	for _, e := range emitter.events {
 		if eid == e {
 			return true
@@ -97,20 +95,14 @@ func (emitter *EventEmitter) openEventChannel(sensor *model.Sensor) error {
 	return errors.New("not implemented")
 }
 
-func (emitter *EventEmitter) publish(e *EventData) error {
-	var eventID = e.getEid()
-
-	if !emitter.isEventSupported(eventID) {
-		return errors.New(fmt.Sprintf("event %s not supported", eventID))
-	}
-
-	eventPath := fmt.Sprintf("/agent/events/%s", eventID)
+func (emitter *EventEmitter) send(e *EventData, eid string) error {
+	eventPath := fmt.Sprintf("/agent/events/%s", eid)
 	uri := emitter.config.AgentUrl + eventPath
 
 	event := map[string]interface{}{
-		"value":     e.Value,
+		"value":     e.Value.Now,
 		"unit":      e.Unit,
-		"timestamp": strconv.FormatInt(e.TimeStamp, 10),
+		"timestamp": e.TimeStamp,
 	}
 
 	payload, err := json.Marshal(&event)
@@ -121,13 +113,15 @@ func (emitter *EventEmitter) publish(e *EventData) error {
 
 	req, err := http.NewRequest(http.MethodPut, uri, bytes.NewBuffer(payload))
 
+	if err != nil {
+		return err
+	}
+
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("infrastructure-id", e.UniqueID)
 	req.Header.Set("adapter-id", emitter.config.AdapterID)
 
-	if err != nil {
-		return err
-	}
+	req.Close = true
 
 	resp, err := emitter.httpClient.Do(req)
 
@@ -144,7 +138,16 @@ func (emitter *EventEmitter) publish(e *EventData) error {
 	}
 
 	// todo: replace with status checks
-	log.Println(body)
-
+	log.Println(string(body))
 	return nil
+}
+
+func (emitter *EventEmitter) publish(e *EventData) error {
+	var eid = e.getEid()
+
+	if !emitter.isEventSupported(eid) {
+		return errors.New(fmt.Sprintf("event %s not supported", eid))
+	}
+
+	return emitter.send(e, eid)
 }

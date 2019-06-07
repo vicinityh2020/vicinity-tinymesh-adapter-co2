@@ -28,7 +28,7 @@ func (server *Server) handleProperties(c *gin.Context) {
 	switch prop {
 	case "value":
 		c.JSON(http.StatusOK, gin.H{
-			"value":     sensor.Value.Instant,
+			"value":     sensor.Value.Now,
 			"unit":      sensor.Unit,
 			"timestamp": sensor.LastUpdated,
 		})

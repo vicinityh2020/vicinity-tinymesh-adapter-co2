@@ -34,7 +34,7 @@ type DataPoint struct {
 	High      string          `json:"high"`
 }
 
-type VitirSensor struct {
+type VitirSensorEvent struct {
 	DsType       string      `json:"dsType"`
 	MrfCuID      string      `json:"mrfCuId"`
 	TimeStamp    int64       `json:"timeStamp"`
@@ -64,8 +64,8 @@ func filter(dataPoints []DataPoint, predicate Predicate) (ret []DataPoint) {
 	return ret
 }
 
-func extractCO2Data(payload []byte) (*VitirSensor, error) {
-	var sensor VitirSensor
+func extractCO2Data(payload []byte) (*VitirSensorEvent, error) {
+	var sensor VitirSensorEvent
 
 	err := json.Unmarshal(payload, &sensor)
 	if err != nil {

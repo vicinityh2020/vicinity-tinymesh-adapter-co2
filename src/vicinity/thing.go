@@ -1,12 +1,21 @@
 package vicinity
 
+type Location struct {
+	LocationType string `json:"location_type"`
+	LocationId   string `json:"location_id,omitempty"`
+	Label        string `json:"label"`
+}
+
 type Schema struct {
 	Type string `json:"type"`
 }
 
 type Field struct {
-	Name   string `json:"name"`
-	Schema Schema `json:"schema"`
+	Name        string `json:"name"`
+	Schema      Schema `json:"schema"`
+	Type        string `json:"type,omitempty"`
+	Predicate   string `json:"predicate,omitempty"`
+	Description string `json:"description,omitempty"`
 }
 
 type IO struct {
@@ -41,4 +50,5 @@ type Device struct {
 	Properties []Property    `json:"properties"`
 	Actions    []interface{} `json:"actions"`
 	Events     []Event       `json:"events"`
+	LocatedIn  []Location    `json:"located-in"`
 }

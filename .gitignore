@@ -5,6 +5,12 @@
 *.so
 *.dylib
 
+.DS_Store
+out
+
+# VICINITY node
+vicinity_node
+
 # Idea
 .idea
 

@@ -3,7 +3,7 @@ package cloudmqtt
 import "fmt"
 
 type NotCO2SensorError struct {
-	sensor *VitirSensor
+	sensor *VitirSensorEvent
 	msg string
 }
 

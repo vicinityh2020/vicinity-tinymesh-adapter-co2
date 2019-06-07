@@ -13,6 +13,7 @@ import (
 	"vicinity-tinymesh-adapter-co2/src/cloudmqtt"
 	"vicinity-tinymesh-adapter-co2/src/config"
 	"vicinity-tinymesh-adapter-co2/src/controller"
+	"vicinity-tinymesh-adapter-co2/src/model"
 	"vicinity-tinymesh-adapter-co2/src/vicinity"
 )
 
@@ -23,6 +24,45 @@ type Environment struct {
 
 var app Environment
 
+func (app *Environment) syncDb() {
+
+	var sensors = []model.Sensor{
+		{
+			UniqueID:    "LAS00016225",
+			ModelNumber: "LAN-WMBUS-E-CO2",
+			Unit:        "ppm",
+			Value: model.SensorValue{
+				Now:    0,
+				Hourly: 0,
+				Daily:  0,
+			},
+			LastUpdated: time.Now().Unix(),
+		},
+		{
+			UniqueID:    "LAS00016222",
+			ModelNumber: "LAN-WMBUS-E-CO2",
+			Unit:        "ppm",
+			Value: model.SensorValue{
+				Now:    0,
+				Hourly: 0,
+				Daily:  0,
+			},
+			LastUpdated: time.Now().Unix(),
+		},
+	}
+
+	for _, s := range sensors {
+		var d model.Sensor
+		if err := app.DB.One("UniqueID", s.UniqueID, &d); err == storm.ErrNotFound {
+			if err := app.DB.Save(&s); err != nil {
+				if err != storm.ErrAlreadyExists {
+					log.Fatalln(err.Error())
+				}
+			}
+		}
+	}
+}
+
 func (app *Environment) init() {
 	// loads values from .env into the system
 	if err := godotenv.Load(); err != nil {
@@ -32,7 +72,7 @@ func (app *Environment) init() {
 	app.Config = config.New()
 
 	// open bolt db
-	db, err := storm.Open("my.db", storm.BoltOptions(0600, &bolt.Options{Timeout: 1 * time.Second}))
+	db, err := storm.Open(".db", storm.BoltOptions(0600, &bolt.Options{Timeout: 1 * time.Second}))
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
@@ -52,6 +92,8 @@ func (app *Environment) run() {
 	v := vicinity.New(app.Config.Vicinity, app.DB)
 
 	emitter := v.NewEventEmitter(mqttc.GetEventChannel(), &wg)
+
+	wg.Add(1)
 	go emitter.ListenAndEmit()
 
 	server := controller.New(app.Config.Server, v)
@@ -70,8 +112,12 @@ func (app *Environment) run() {
 // init is invoked before main automatically
 func init() {
 	app.init()
+	app.syncDb()
 }
 
 func main() {
+	// todo: proper logging
+	// todo: fix TD with object event values and object property values\
+	// todo: make json config for supported devices
 	app.run()
 }

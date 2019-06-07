@@ -2,23 +2,20 @@ package model
 
 import (
 	"fmt"
-	"time"
 )
 
-type Reading struct {
-	Instant int
-	Hourly  int
-	Daily   int
+type SensorValue struct {
+	Now    int
+	Hourly int
+	Daily  int
 }
 
 type Sensor struct {
-	Pk           int `storm:"id,increment"` // primary key
-	SerialNumber string
+	UniqueID     string `storm:"id"`
 	ModelNumber  string
 	Unit         string
-	UniqueID     string `storm:"unique"`
-	Value        Reading `storm:"inline"`
-	LastUpdated  time.Time `storm:"index"`
+	Value        SensorValue `storm:"inline"`
+	LastUpdated  int64       `storm:"index"`
 }
 
 func (s *Sensor) GetEid() string {
