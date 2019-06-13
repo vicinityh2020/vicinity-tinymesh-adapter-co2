@@ -29,7 +29,7 @@ func (s *Sensor) GetValue() gin.H {
 	return gin.H{
 		"value":     s.Value.Now,
 		"unit":      s.Unit,
-		"timestamp": s.LastUpdated,
+		//"timestamp": s.LastUpdated,
 	}
 }
 

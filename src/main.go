@@ -118,13 +118,19 @@ func (app *Environment) run() {
 	}
 	defer ginLogger.Close()
 
+	hackathonLogger, err := os.OpenFile(path.Join(app.LogPath, fmt.Sprintf("hackathon-%s.log", time.Now().Format("2006-01-02"))), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatal("Could not create GIN trace logfile:", err.Error())
+	}
+	defer hackathonLogger.Close()
+
 	log.SetOutput(mainLogger)
 
 	defer app.DB.Close()
 	defer wg.Wait()
 
 	// MQTT
-	mqttc := cloudmqtt.New(app.Config.MQTT, app.DB, log.New(mqttLogger, "", log.Ldate|log.Ltime))
+	mqttc := cloudmqtt.New(app.Config.MQTT, app.DB, log.New(mqttLogger, "", log.Ldate|log.Ltime), log.New(hackathonLogger, "", log.Ldate | log.Ltime))
 	mqttc.Listen()
 	defer mqttc.Shutdown()
 

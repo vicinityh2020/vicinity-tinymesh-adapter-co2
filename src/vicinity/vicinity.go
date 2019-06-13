@@ -23,8 +23,12 @@ type EventDescription struct {
 
 const (
 	// Fields
-	semanticValue       = "core:value"
-	semanticTimestamp   = "core:timestamp"
+	semanticValue     = "core:value"
+	semanticTimestamp = "core:timestamp"
+
+	s4City              = "s4city:City"
+	s4Country           = "s4city:Country"
+	s4bldgBuilding      = "s4bldg:Building"
 	s4bldgBuildingSpace = "s4bldg:BuildingSpace"
 
 	// Devices
@@ -59,20 +63,22 @@ var (
 		},
 
 		// Field Timestamp
-		{
-			Name:        "timestamp",
-			Description: "Unix timestamp of time the reading was received",
-			Predicate:   semanticTimestamp,
-			Schema: Schema{
-				Type: "integer",
-			},
-		},
+		// TODO: re-enable after hackathon
+		//{
+		//	Name:        "timestamp",
+		//	Description: "Unix timestamp of time the reading was received",
+		//	Predicate:   semanticTimestamp,
+		//	Schema: Schema{
+		//		Type: "integer",
+		//	},
+		//},
 	}
 
 	latitudeMeta = []Field{
 		{
 			Name:        "latitude",
 			Description: "latitudinal coordinates of the device",
+			Predicate: "core:value",
 			Schema: Schema{
 				Type: "double",
 			},
@@ -83,6 +89,7 @@ var (
 		{
 			Name:        "longitude",
 			Description: "longitudinal coordinates of the device",
+			Predicate: "core:value",
 			Schema: Schema{
 				Type: "double",
 			},
@@ -148,9 +155,9 @@ func (c *Client) makeDevice(sensor model.Sensor) Device {
 	properties = append(properties, c.makeProperty("longitudinal coordinates", adaptersLongitude, "longitude", sensor.UniqueID, longitudeMeta, sensor.Longitude))
 
 	return Device{
-		Oid:      sensor.UniqueID,
-		Name:     fmt.Sprintf("Vitir CO2 Sensor %s", sensor.UniqueID),
-		Type:     adaptersCo2Sensor,
+		Oid:  sensor.UniqueID,
+		Name: fmt.Sprintf("Vitir CO2 Sensor %s", sensor.UniqueID),
+		Type: adaptersCo2Sensor,
 		//Version:  sensor.ModelNumber,        // only for services?
 		//Keywords: []string{"co2", "sensor"}, // only for services?
 
@@ -158,7 +165,10 @@ func (c *Client) makeDevice(sensor model.Sensor) Device {
 		Actions:    []interface{}{},
 		Events:     events,
 		LocatedIn: []Location{
-			{LocationType: s4bldgBuildingSpace, LocationId: "https://www.cwi.no", Label: "CWi Moss"},
+			{LocationType: s4bldgBuilding, LocationId: "https://www.cwi.no", Label: "M:6 Moss"},
+			{LocationType: s4bldgBuildingSpace, Label: "CWi Moss Offices"},
+			{LocationType: s4City, LocationId: "http://dbpedia.org/page/Moss,_Norway", Label: "Moss"},
+			{LocationType: s4Country, LocationId: "http://dbpedia.org/page/Norway", Label: "Norway"},
 		},
 	}
 }

@@ -24,11 +24,15 @@ const (
 )
 
 type Client struct {
-	config      *config.MQTTConfig
-	db          *storm.DB
-	eventCh     chan *vicinity.EventData
-	client      mqtt.Client
-	traceLogger *log.Logger
+	config          *config.MQTTConfig
+	db              *storm.DB
+	eventCh         chan *vicinity.EventData
+	client          mqtt.Client
+	traceLogger     *log.Logger
+
+	// hackathon
+	hackathonLogger *log.Logger
+	lastTick time.Time
 }
 
 func (cmqtt *Client) updateDb(e *vicinity.EventData) error {
@@ -52,6 +56,9 @@ func (cmqtt *Client) registerCallback() mqtt.MessageHandler {
 
 		// forward event to vicinity EventEmitter
 		cmqtt.eventCh <- event
+
+		// Hackathon
+		cmqtt.writeFile(event)
 
 		// update the local database
 		if err := cmqtt.updateDb(event); err != nil {
@@ -94,7 +101,7 @@ func (cmqtt *Client) buildMQTTConnection() mqtt.Client {
 	return mqtt.NewClient(opts)
 }
 
-func New(env *config.MQTTConfig, db *storm.DB, logger *log.Logger) *Client {
+func New(env *config.MQTTConfig, db *storm.DB, logger *log.Logger, hackathon *log.Logger) *Client {
 
 	eventChannel := make(chan *vicinity.EventData)
 	client := &Client{
@@ -102,6 +109,8 @@ func New(env *config.MQTTConfig, db *storm.DB, logger *log.Logger) *Client {
 		db:      db,
 		eventCh: eventChannel,
 		traceLogger: logger,
+		hackathonLogger: hackathon,
+		lastTick: time.Now(),
 	}
 
 	return client
@@ -128,6 +137,17 @@ func (cmqtt *Client) Shutdown() {
 
 func (cmqtt *Client) GetEventChannel() chan *vicinity.EventData {
 	return cmqtt.eventCh
+}
+
+func (cmqtt *Client) writeFile(data *vicinity.EventData) {
+
+	now := time.Now()
+	if now.Sub(cmqtt.lastTick) >= (1 * time.Hour) {
+		cmqtt.traceLogger.Println("Value written for hackathon")
+		cmqtt.hackathonLogger.Println(data.Value.Now)
+	}
+
+	cmqtt.lastTick = now
 }
 
 func translateEventData(co2Data *VitirSensorEvent) *vicinity.EventData {
