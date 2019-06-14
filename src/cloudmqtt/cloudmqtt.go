@@ -140,14 +140,10 @@ func (cmqtt *Client) GetEventChannel() chan *vicinity.EventData {
 }
 
 func (cmqtt *Client) writeFile(data *vicinity.EventData) {
-
-	now := time.Now()
-	if now.Sub(cmqtt.lastTick) >= (1 * time.Hour) {
-		cmqtt.traceLogger.Println("Value written for hackathon")
-		cmqtt.hackathonLogger.Println(data.Value.Now)
+	if time.Since(cmqtt.lastTick) >= 1 * time.Hour {
+		cmqtt.hackathonLogger.Printf("[%v]: %v\n", data.UniqueID, data.Value.Now)
+		cmqtt.lastTick = time.Now()
 	}
-
-	cmqtt.lastTick = now
 }
 
 func translateEventData(co2Data *VitirSensorEvent) *vicinity.EventData {
