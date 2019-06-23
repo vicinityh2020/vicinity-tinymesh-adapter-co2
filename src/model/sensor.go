@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"strconv"
 )
 
 type SensorValue struct {
@@ -29,7 +30,7 @@ func (s *Sensor) GetValue() gin.H {
 	return gin.H{
 		"value":     s.Value.Now,
 		"unit":      s.Unit,
-		//"timestamp": s.LastUpdated,
+		"timestamp": strconv.FormatInt(s.LastUpdated, 10),
 	}
 }
 

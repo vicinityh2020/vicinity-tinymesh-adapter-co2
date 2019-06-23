@@ -63,22 +63,21 @@ var (
 		},
 
 		// Field Timestamp
-		// TODO: re-enable after hackathon
-		//{
-		//	Name:        "timestamp",
-		//	Description: "Unix timestamp of time the reading was received",
-		//	Predicate:   semanticTimestamp,
-		//	Schema: Schema{
-		//		Type: "integer",
-		//	},
-		//},
+		{
+			Name:        "timestamp",
+			Description: "Unix timestamp of time the reading was received",
+			Predicate:   semanticTimestamp,
+			Schema: Schema{
+				Type: "string",
+			},
+		},
 	}
 
 	latitudeMeta = []Field{
 		{
 			Name:        "latitude",
 			Description: "latitudinal coordinates of the device",
-			Predicate: "core:value",
+			Predicate:   semanticValue,
 			Schema: Schema{
 				Type: "double",
 			},
@@ -89,7 +88,7 @@ var (
 		{
 			Name:        "longitude",
 			Description: "longitudinal coordinates of the device",
-			Predicate: "core:value",
+			Predicate:   semanticValue,
 			Schema: Schema{
 				Type: "double",
 			},
@@ -134,7 +133,7 @@ func (c *Client) makeProperty(description string, monitors string, pid string, o
 func (c *Client) makeEvent(description string, oid string) Event {
 	return Event{
 		Eid:      fmt.Sprintf("%s-event", oid),
-		Monitors: "adapters:CO2Concentration",
+		Monitors: adaptersCO2Concentration,
 		Output: IO{
 			Type:        "object",
 			Description: description,

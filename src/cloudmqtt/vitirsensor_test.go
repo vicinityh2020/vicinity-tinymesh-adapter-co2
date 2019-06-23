@@ -26,8 +26,6 @@ func getMockData(mockfile string) []byte {
 }
 
 func TestExtractCO2(t *testing.T) {
-	// todo: remake with respect to object event
-
 	dummy := getMockData("roomsensor.json")
 	fasit := []interface{}{482, 474, 469}
 

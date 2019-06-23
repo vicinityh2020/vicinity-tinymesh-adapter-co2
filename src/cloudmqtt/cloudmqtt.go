@@ -24,14 +24,12 @@ const (
 )
 
 type Client struct {
-	config          *config.MQTTConfig
-	db              *storm.DB
-	eventCh         chan *vicinity.EventData
-	client          mqtt.Client
-	traceLogger     *log.Logger
+	config  *config.MQTTConfig
+	db      *storm.DB
+	eventCh chan *vicinity.EventData
+	client  mqtt.Client
+	log     *log.Logger
 
-	// hackathon
-	hackathonLogger *log.Logger
 	lastTick time.Time
 }
 
@@ -57,9 +55,6 @@ func (cmqtt *Client) registerCallback() mqtt.MessageHandler {
 		// forward event to vicinity EventEmitter
 		cmqtt.eventCh <- event
 
-		// Hackathon
-		cmqtt.writeFile(event)
-
 		// update the local database
 		if err := cmqtt.updateDb(event); err != nil {
 			log.Println(err.Error())
@@ -70,8 +65,8 @@ func (cmqtt *Client) registerCallback() mqtt.MessageHandler {
 func (cmqtt *Client) buildMQTTConnection() mqtt.Client {
 	var onMessageCallback = cmqtt.registerCallback()
 
-	mqtt.ERROR = cmqtt.traceLogger
-	//mqtt.DEBUG = cmqtt.traceLogger
+	mqtt.ERROR = cmqtt.log
+	//mqtt.DEBUG = cmqtt.log
 
 	var scheme string
 	if cmqtt.config.Secure {
@@ -101,16 +96,15 @@ func (cmqtt *Client) buildMQTTConnection() mqtt.Client {
 	return mqtt.NewClient(opts)
 }
 
-func New(env *config.MQTTConfig, db *storm.DB, logger *log.Logger, hackathon *log.Logger) *Client {
+func New(env *config.MQTTConfig, db *storm.DB, logger *log.Logger) *Client {
 
 	eventChannel := make(chan *vicinity.EventData)
 	client := &Client{
-		config:  env,
-		db:      db,
-		eventCh: eventChannel,
-		traceLogger: logger,
-		hackathonLogger: hackathon,
-		lastTick: time.Now(),
+		config:          env,
+		db:              db,
+		eventCh:         eventChannel,
+		log:             logger,
+		lastTick:        time.Now(),
 	}
 
 	return client
@@ -137,13 +131,6 @@ func (cmqtt *Client) Shutdown() {
 
 func (cmqtt *Client) GetEventChannel() chan *vicinity.EventData {
 	return cmqtt.eventCh
-}
-
-func (cmqtt *Client) writeFile(data *vicinity.EventData) {
-	if time.Since(cmqtt.lastTick) >= 1 * time.Hour {
-		cmqtt.hackathonLogger.Printf("[%v]: %v\n", data.UniqueID, data.Value.Now)
-		cmqtt.lastTick = time.Now()
-	}
 }
 
 func translateEventData(co2Data *VitirSensorEvent) *vicinity.EventData {

@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 	"vicinity-tinymesh-adapter-co2/src/config"
@@ -102,7 +103,7 @@ func (emitter *EventEmitter) send(e *EventData, eid string) error {
 	event := map[string]interface{}{
 		"value":     e.Value.Now,
 		"unit":      e.Unit,
-		"timestamp": e.TimeStamp,
+		"timestamp": strconv.FormatInt(e.TimeStamp, 10),
 	}
 
 	payload, err := json.Marshal(&event)
@@ -137,7 +138,6 @@ func (emitter *EventEmitter) send(e *EventData, eid string) error {
 		return err
 	}
 
-	// todo: replace with status checks
 	log.Println(string(body))
 	return nil
 }
