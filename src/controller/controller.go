@@ -25,7 +25,7 @@ func (server *Server) setupRouter() *gin.Engine {
 
 	r.Use(gin.LoggerWithWriter(server.ginLogger))
 
-	r.GET("/", server.handleTD)
+	//r.GET("/", server.handleTD)
 	r.GET("/objects", server.handleTD)
 	r.GET("/objects/:oid/properties/:prop", server.handleProperties)
 
